@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  ping-bot:
+    build: .
+    container_name: telegram-ping-bot
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data  # Монтуємо папку з даними
+    env_file:
+      - .env  # Використовуємо наш .env файл
