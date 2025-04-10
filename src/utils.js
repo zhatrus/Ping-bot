@@ -42,10 +42,15 @@ function formatIPCard(ipData) {
     uptimeInfo = `\n⏱ Час простою: ${downtime} хв`;
   }
   
-  const text = `📌 ${name}\n` +
-         `🔗 ${ipData.ip}\n` +
-         `📅 Зареєстровано: ${new Date(ipData.date_start).toLocaleString()}\n` +
-         `🔄 Остання перевірка: ${new Date(ipData.date_last).toLocaleString()}\n` +
+  // Функція для екранування спеціальних символів MarkdownV2
+  const escapeMarkdown = (text) => {
+    return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+  };
+
+  const text = `📌 ${escapeMarkdown(name)}\n` +
+         `🔗 \`${escapeMarkdown(ipData.ip)}\`\n` +
+         `📅 Зареєстровано: ${escapeMarkdown(new Date(ipData.date_start).toLocaleString())}\n` +
+         `🔄 Остання перевірка: ${escapeMarkdown(new Date(ipData.date_last).toLocaleString())}\n` +
          `📊 Стан: ${statusEmoji} ${ipData.status}\n` +
          `⏰ Час відповіді: ${ipData.responseTime || '?'} ms\n` +
          uptimeInfo;

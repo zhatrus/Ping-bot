@@ -106,17 +106,34 @@ async function handleCancelDelete(ctx) {
       }
     });
     
-    // Видаляємо всі повідомлення з кнопками "Delete", якщо можливо
-    try {
-      await ctx.deleteMessage(ctx.callbackQuery.message.message_id).catch(() => {});
-    } catch (e) {
-      console.log('Не вдалося видалити повідомлення');
+    // Видаляємо всі повідомлення з кнопками видалення
+    if (global.deleteMessages && global.deleteMessages.length > 0) {
+      for (const messageId of global.deleteMessages) {
+        try {
+          await ctx.deleteMessage(messageId).catch(() => {});
+        } catch (e) {
+          console.log('Не вдалося видалити повідомлення', messageId);
+        }
+      }
+      // Очищуємо масив повідомлень
+      global.deleteMessages = [];
     }
     
-    await ctx.reply('✅ Видалення скасовано.');
+    // Відправляємо повідомлення про успішне скасування
+    const msg = await ctx.reply('✅ Видалення скасовано.');
+    
+    // Видаляємо повідомлення про успіх через 3 секунди
+    setTimeout(async () => {
+      try {
+        await ctx.deleteMessage(msg.message_id).catch(() => {});
+      } catch (e) {
+        console.log('Не вдалося видалити повідомлення про успіх');
+      }
+    }, 3000);
+    
   } catch (error) {
     console.error('Помилка при скасуванні видалення:', error);
-    await ctx.reply('Сталася помилка при скасуванні видалення.');
+    await ctx.reply('❌ Сталася помилка при скасуванні видалення.');
   }
 }
 
@@ -156,7 +173,7 @@ async function handlePing(ctx) {
       
       // Формуємо та відправляємо картку IP
       const card = formatIPCard(ipData);
-      await ctx.reply(card.text, card.markup);
+      await ctx.reply(card.text, { ...card.markup, parse_mode: 'MarkdownV2' });
     } catch (error) {
       console.error('Помилка при пінгуванні:', error);
       await ctx.reply('Сталася помилка при пінгуванні. Спробуйте пізніше.');

@@ -57,7 +57,7 @@ async function handleAdd(ctx) {
   await ctx.reply('Введіть IP-адресу для моніторингу:');
 }
 
-// Обробник команди /del
+// Обробник команди /dell
 async function handleDel(ctx) {
   if (!isUserAllowed(ctx.chat.id)) {
     return ctx.reply('Доступ заборонено!');
@@ -75,15 +75,18 @@ async function handleDel(ctx) {
         return ctx.reply('Список IP порожній.');
       }
       
-      await ctx.reply('Виберіть IP для видалення:');
+      // Зберігаємо ID повідомлення з заголовком
+      const headerMsg = await ctx.reply('Виберіть IP для видалення:');
+      global.deleteMessages = global.deleteMessages || [];
+      global.deleteMessages.push(headerMsg.message_id);
       
       // Для кожного IP створюємо окреме повідомлення з кнопкою видалення
       for (const ipData of ips) {
         const ipName = ipData.name ? ` (${ipData.name})` : '';
         const ipStatus = ipData.status === 'up' ? '🟢' : '🔴';
-        const ipText = `${ipStatus} ${ipData.ip}${ipName}`;
+        const ipText = `${ipStatus} <code>${ipData.ip}</code>${ipName}`;
         
-        await ctx.reply(ipText, {
+        const msg = await ctx.reply(ipText, {
           reply_markup: {
             inline_keyboard: [
               [{
@@ -91,12 +94,14 @@ async function handleDel(ctx) {
                 callback_data: `delete_${ipData.ip}`
               }]
             ]
-          }
+          },
+          parse_mode: 'HTML'
         });
+        global.deleteMessages.push(msg.message_id);
       }
       
       // Додаємо пояснення та кнопку Скасувати
-      return ctx.reply('Натисніть на кнопку "Видалити" для потрібного IP', {
+      const footerMsg = await ctx.reply('Натисніть на кнопку "Видалити" для потрібного IP', {
         reply_markup: {
           inline_keyboard: [
             [{
@@ -106,6 +111,8 @@ async function handleDel(ctx) {
           ]
         }
       });
+      global.deleteMessages.push(footerMsg.message_id);
+      return;
       
     } catch (error) {
       console.error('Помилка при отриманні списку IP:', error);

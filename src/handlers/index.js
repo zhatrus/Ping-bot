@@ -8,7 +8,7 @@ function setupHandlers(bot) {
   bot.command('cancel', handleCancel);
   bot.command('ip', handleIp);
   bot.command('add', handleAdd);
-  bot.command('del', handleDel);
+  bot.command('dell', handleDel);
 
   // Дії (callback queries)
   bot.action(/^ping_(.+)$/, handlePing);
