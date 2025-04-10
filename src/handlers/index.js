@@ -1,5 +1,5 @@
 const { handleStart, handleCancel, handleIp, handleAdd } = require('./commands');
-const { handlePingAction, handleDeleteAction } = require('./actions');
+const { handlePing, handleDeleteAction } = require('./actions');
 const { handleMessage } = require('./messages');
 
 function setupHandlers(bot) {
@@ -10,8 +10,8 @@ function setupHandlers(bot) {
   bot.command('add', handleAdd);
 
   // Дії (callback queries)
-  bot.action(/ping_(.+)/, handlePingAction);
-  bot.action(/delete_(.+)/, handleDeleteAction);
+  bot.action(/^ping_(.+)$/, handlePing);
+  bot.action(/^delete_(.+)$/, handleDeleteAction);
 
   // Текстові повідомлення
   bot.on('text', handleMessage);

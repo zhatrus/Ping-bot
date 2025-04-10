@@ -52,7 +52,8 @@ async function addIP(ip, name = null) {
     status: 'unknown',
     date_start: new Date().toISOString(),
     date_stop: null,
-    date_last: new Date().toISOString()
+    date_last: new Date().toISOString(),
+    responseTime: null
   };
   
   ipsDb.data.push(newIP);
@@ -69,7 +70,7 @@ async function removeIP(ip) {
 }
 
 // Оновити статус IP
-async function updateIPStatus(ip, status) {
+async function updateIPStatus(ip, status, responseTime = null) {
   await ipsDb.read();
   const ipToUpdate = ipsDb.data.find(item => item.ip === ip);
   
@@ -77,6 +78,7 @@ async function updateIPStatus(ip, status) {
   
   ipToUpdate.status = status;
   ipToUpdate.date_last = new Date().toISOString();
+  ipToUpdate.responseTime = responseTime;
   
   if (status === 'down' && ipToUpdate.date_stop === null) {
     ipToUpdate.date_stop = new Date().toISOString();
@@ -138,9 +140,16 @@ async function getAllErrors() {
   return errorsDb.data || [];
 }
 
+// Отримати інформацію про IP
+async function getIP(ip) {
+  await ipsDb.read();
+  return ipsDb.data.find(item => item.ip === ip);
+}
+
 module.exports = {
   initDB,
   getAllIPs,
+  getIP,
   addIP,
   removeIP,
   updateIPStatus,

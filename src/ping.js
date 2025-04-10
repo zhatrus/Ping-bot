@@ -6,16 +6,17 @@ const { notifyAdmins } = require('./utils');
 async function pingIP(ip) {
   try {
     const res = await ping.promise.probe(ip, {
-      timeout: 30,  // Збільшуємо таймаут до 30 секунд
-      min_reply: 1,  // Зменшуємо мінімум до 1 відповіді для швидшої реакції
+      timeout: 5,  // Таймаут 5 секунд
+      min_reply: 1,  // Мінімум 1 відповідь
       extra: [
-        '-n', '3',  // Зменшуємо до 3 спроб для швидшої реакції
-        '-w', '30000'  // Збільшуємо таймаут до 30 секунд
+        '-n', '2',  // 2 спроби
+        '-w', '5000'  // Таймаут 5 секунд
       ]
     });
     
     const isAlive = res.alive;
-    const updateResult = await db.updateIPStatus(ip, isAlive ? 'up' : 'down');
+    const responseTime = isAlive ? parseFloat(res.time) : null;
+    const updateResult = await db.updateIPStatus(ip, isAlive ? 'up' : 'down', responseTime);
     
     if (isAlive) {
       // Якщо IP знову онлайн, перевіряємо чи була помилка

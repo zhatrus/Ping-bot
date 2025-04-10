@@ -1,18 +1,1 @@
-[
-  {
-    "name": "google",
-    "ip": "8.8.8.8",
-    "status": "up",
-    "date_start": "2025-04-10T15:41:24.853Z",
-    "date_stop": null,
-    "date_last": "2025-04-10T15:51:30.930Z"
-  },
-  {
-    "name": null,
-    "ip": "104.26.12.153",
-    "status": "up",
-    "date_start": "2025-04-10T15:52:37.476Z",
-    "date_stop": null,
-    "date_last": "2025-04-10T15:52:39.651Z"
-  }
-]
+[]

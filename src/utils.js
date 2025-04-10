@@ -47,6 +47,7 @@ function formatIPCard(ipData) {
          `📅 Зареєстровано: ${new Date(ipData.date_start).toLocaleString()}\n` +
          `🔄 Остання перевірка: ${new Date(ipData.date_last).toLocaleString()}\n` +
          `📊 Стан: ${statusEmoji} ${ipData.status}\n` +
+         `⏰ Час відповіді: ${ipData.responseTime || '?'} ms\n` +
          uptimeInfo;
   
   const markup = {
