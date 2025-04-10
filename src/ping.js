@@ -1,8 +1,8 @@
-const ping = require('ping');
+const { exec } = require('child_process');
 const db = require('./db');
 const { notifyAdmins } = require('./utils');
 
-// Функція для пінгування IP
+// Функція для пінгування IP через системну команду
 async function pingIP(ip) {
   try {
     // Спочатку перевіряємо чи є IP в базі
@@ -11,26 +11,50 @@ async function pingIP(ip) {
       throw new Error(`IP ${ip} не знайдено в списку`);
     }
 
-    // Визначаємо параметри в залежності від ОС
+    // Визначаємо команду в залежності від ОС
     const isWindows = process.platform === 'win32';
-    const pingOptions = {
-      timeout: 10,
-      min_reply: 1,
-      extra: isWindows ? 
-        ['-n', '2', '-w', '5000'] :  // Windows
-        ['-c', '2', '-W', '5']       // Linux/Unix
-    };
+    const command = isWindows ?
+      `ping -n 2 -w 5000 ${ip}` :
+      `ping -c 2 -W 5 ${ip}`;
 
-    const res = await ping.promise.probe(ip, pingOptions);
-    
-    const isAlive = res.alive;
-    const responseTime = isAlive ? parseFloat(res.time) : null;
-    
-    // Оновлюємо статус в базі даних
-    const updateResult = await db.updateIPStatus(ip, isAlive ? 'up' : 'down', responseTime);
-    if (!updateResult || updateResult.success === false) {
-      throw new Error(updateResult?.message || 'Не вдалося оновити статус IP');
-    }
+    return new Promise((resolve, reject) => {
+      exec(command, (error, stdout, stderr) => {
+        if (error) {
+          // Оновлюємо статус в базі даних як 'down'
+          db.updateIPStatus(ip, 'down', null);
+          resolve({ alive: false, time: null });
+          return;
+        }
+
+        // Парсимо час відповіді
+        let responseTime = null;
+        const output = stdout.toString();
+
+        if (isWindows) {
+          // Для Windows
+          const match = output.match(/Среднее = (\d+)мс|Average = (\d+)ms/);
+          if (match) {
+            responseTime = parseInt(match[1] || match[2]);
+          }
+        } else {
+          // Для Linux
+          const match = output.match(/rtt min\/avg\/max\/mdev = [\d.]+\/([\d.]+)/);
+          if (match) {
+            responseTime = parseFloat(match[1]);
+          }
+        }
+
+        const isAlive = responseTime !== null;
+        
+        // Оновлюємо статус в базі даних
+        db.updateIPStatus(ip, isAlive ? 'up' : 'down', responseTime);
+        
+        resolve({
+          alive: isAlive,
+          time: responseTime
+        });
+      });
+    });
     
     // Обробляємо зміну статусу
     if (isAlive) {
