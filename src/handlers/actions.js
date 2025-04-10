@@ -40,25 +40,83 @@ async function handlePingAction(ctx) {
   }
 }
 
+// Обробник відмови від додавання IP
+async function handleCancelAdd(ctx) {
+  try {
+    await ctx.deleteMessage(ctx.callbackQuery.message.message_id);
+  } catch (error) {
+    console.error('Помилка при видаленні повідомлення:', error);
+  }
+}
+
 // Обробник дії видалення IP
 async function handleDeleteAction(ctx) {
   try {
     if (!isUserAllowed(ctx.chat.id)) {
-      return ctx.answerCbQuery('Доступ заборонено!');
+      return ctx.answerCbQuery('Доступ заборонено!').catch(err => {
+        if (err.message.includes('query is too old')) {
+          console.log('Ігноруємо застарілий callback query');
+        } else {
+          console.error('Помилка відповіді на callback:', err);
+        }
+      });
     }
     
     const ip = ctx.callbackQuery.data.split('_')[1];
-    const messageId = ctx.callbackQuery.message.message_id;
     
-    // Видаляємо картку
-    await ctx.deleteMessage(messageId);
+    // Повідомляємо користувача про початок видалення
+    await ctx.answerCbQuery(`Видаляю IP ${ip}...`).catch(err => {
+      if (err.message.includes('query is too old')) {
+        console.log('Ігноруємо застарілий callback query');
+      } else {
+        console.error('Помилка відповіді на callback:', err);
+      }
+    });
     
     // Видаляємо IP з бази
-    await db.removeIP(ip);
-    await ctx.reply(`IP ${ip} успішно видалено!`);
+    const result = db.removeIP(ip);
+    
+    if (result) {
+      // Видалити всі повідомлення з кнопками видалення
+      try {
+        // Спробуємо видалити повідомлення, з якого викликана команда
+        await ctx.deleteMessage(ctx.callbackQuery.message.message_id).catch(() => {});
+      } catch (e) {
+        console.log('Не вдалося видалити повідомлення');
+      }
+      
+      await ctx.reply(`✅ IP ${ip} успішно видалено!`);
+    } else {
+      await ctx.reply(`❌ Помилка: IP ${ip} не знайдено в списку`);
+    }
   } catch (error) {
     console.error('Помилка при видаленні:', error);
-    await ctx.reply('Сталася помилка при видаленні. Спробуйте пізніше.');
+    await ctx.reply('❌ Сталася помилка при видаленні. Спробуйте пізніше.');
+  }
+}
+
+// Обробник скасування видалення IP
+async function handleCancelDelete(ctx) {
+  try {
+    await ctx.answerCbQuery('Видалення скасовано').catch(err => {
+      if (err.message.includes('query is too old')) {
+        console.log('Ігноруємо застарілий callback query');
+      } else {
+        console.error('Помилка відповіді на callback:', err);
+      }
+    });
+    
+    // Видаляємо всі повідомлення з кнопками "Delete", якщо можливо
+    try {
+      await ctx.deleteMessage(ctx.callbackQuery.message.message_id).catch(() => {});
+    } catch (e) {
+      console.log('Не вдалося видалити повідомлення');
+    }
+    
+    await ctx.reply('✅ Видалення скасовано.');
+  } catch (error) {
+    console.error('Помилка при скасуванні видалення:', error);
+    await ctx.reply('Сталася помилка при скасуванні видалення.');
   }
 }
 
@@ -78,26 +136,31 @@ async function handlePing(ctx) {
     // Відправляємо повідомлення про пінгування
     const statusMsg = await ctx.reply(`Пінгую ${ip}...`);
     
-    // Пінгуємо IP з таймаутом
-    const pingPromise = pingIP(ip);
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Час очікування відповіді вийшов')), 10000);
-    });
-    
-    await Promise.race([pingPromise, timeoutPromise]);
-    
-    // Отримуємо оновлені дані
-    const ipData = await db.getIP(ip);
-    if (!ipData) {
-      throw new Error('Не вдалося знайти IP');
+    try {
+      // Пінгуємо IP з таймаутом
+      const pingPromise = pingIP(ip);
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Час очікування відповіді вийшов')), 10000);
+      });
+      
+      await Promise.race([pingPromise, timeoutPromise]);
+      
+      // Отримуємо оновлені дані про IP
+      const ipData = await db.getIP(ip);
+      if (!ipData) {
+        throw new Error('Не вдалося знайти IP');
+      }
+      
+      // Видаляємо повідомлення про пінгування
+      await ctx.deleteMessage(statusMsg.message_id);
+      
+      // Формуємо та відправляємо картку IP
+      const card = formatIPCard(ipData);
+      await ctx.reply(card.text, card.markup);
+    } catch (error) {
+      console.error('Помилка при пінгуванні:', error);
+      await ctx.reply('Сталася помилка при пінгуванні. Спробуйте пізніше.');
     }
-    
-    // Видаляємо повідомлення про пінгування
-    await ctx.deleteMessage(statusMsg.message_id);
-    
-    // Відправляємо нову картку
-    const card = formatIPCard(ipData);
-    await ctx.reply(card.text, card.markup);
     
   } catch (error) {
     console.error('Помилка при пінгуванні:', error);
@@ -133,9 +196,26 @@ async function handleAddFromMessage(ctx) {
   }
 }
 
+// Обробник для зміни назви IP
+async function handleRename(ctx) {
+  const ip = ctx.match[1];
+  const userId = ctx.from.id;
+  
+  try {
+    global.userStates.set(userId, { action: 'rename', ip });
+    await ctx.reply('✒️ Введіть нову назву для IP ' + ip);
+  } catch (error) {
+    console.error('Помилка при зміні назви IP:', error);
+    await ctx.reply('❌ Сталася помилка при зміні назви IP');
+  }
+}
+
 module.exports = {
-  handlePingAction,
-  handleDeleteAction,
   handlePing,
-  handleAddFromMessage
+  handleDeleteAction,
+  handleAddFromMessage,
+  handleCancelAdd,
+  handleRename,
+  handleCancelDelete,
+  handlePingAction
 };

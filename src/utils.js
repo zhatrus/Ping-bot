@@ -53,10 +53,8 @@ function formatIPCard(ipData) {
   const markup = {
     reply_markup: {
       inline_keyboard: [
-        [
-          { text: '🔄 Пінгувати', callback_data: `ping_${ipData.ip}` },
-          { text: '❌ Видалити', callback_data: `delete_${ipData.ip}` }
-        ]
+        [{ text: '🔄 Пінганути', callback_data: `ping_${ipData.ip}` }],
+        [{ text: '✏️ Змінити назву', callback_data: `rename_${ipData.ip}` }]
       ]
     }
   };

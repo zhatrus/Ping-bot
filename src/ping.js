@@ -5,6 +5,12 @@ const { notifyAdmins } = require('./utils');
 // Функція для пінгування IP
 async function pingIP(ip) {
   try {
+    // Спочатку перевіряємо чи є IP в базі
+    const ipData = await db.getIP(ip);
+    if (!ipData) {
+      throw new Error(`IP ${ip} не знайдено в списку`);
+    }
+
     const res = await ping.promise.probe(ip, {
       timeout: 5,  // Таймаут 5 секунд
       min_reply: 1,  // Мінімум 1 відповідь
@@ -16,8 +22,14 @@ async function pingIP(ip) {
     
     const isAlive = res.alive;
     const responseTime = isAlive ? parseFloat(res.time) : null;
-    const updateResult = await db.updateIPStatus(ip, isAlive ? 'up' : 'down', responseTime);
     
+    // Оновлюємо статус в базі даних
+    const updateResult = await db.updateIPStatus(ip, isAlive ? 'up' : 'down', responseTime);
+    if (!updateResult || updateResult.success === false) {
+      throw new Error(updateResult?.message || 'Не вдалося оновити статус IP');
+    }
+    
+    // Обробляємо зміну статусу
     if (isAlive) {
       // Якщо IP знову онлайн, перевіряємо чи була помилка
       const hadError = await db.removeError(ip);
@@ -43,7 +55,7 @@ async function pingIP(ip) {
     return {
       ip,
       status: isAlive ? 'up' : 'down',
-      time: isAlive ? res.time : null
+      time: responseTime
     };
   } catch (error) {
     console.error(`Помилка пінгування ${ip}:`, error);

@@ -47,7 +47,7 @@ async function restartBot() {
   }
 }
 
-// Ініціалізація бази даних та запуск планувальника
+// Ініціалізація бота та запуск планувальника
 async function startBot() {
   try {
     // Створюємо новий екземпляр бота
@@ -55,10 +55,8 @@ async function startBot() {
 
     // Реєструємо обробники
     setupHandlers(global.bot);
-
-    // Ініціалізуємо базу даних
-    await db.initDB();
-    console.log('База даних ініціалізована');
+    
+    console.log('Бот запущено');
     
     // Запускаємо планувальник пінгування
     pingTask = setInterval(async () => {

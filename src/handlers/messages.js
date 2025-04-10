@@ -65,7 +65,10 @@ async function handleMessage(ctx) {
             const markup = {
               reply_markup: {
                 inline_keyboard: [
-                  [{ text: '➕ Додати до списку', callback_data: `add_${text}` }]
+                  [
+                    { text: '➕ Додати до списку', callback_data: `add_${text}` },
+                    { text: '❌ Ні', callback_data: 'cancel_add' }
+                  ]
                 ]
               }
             };
@@ -132,6 +135,26 @@ async function handleMessage(ctx) {
         global.userStates.delete(userId);
       }
     }
+  }
+  
+  if (userState && (userState.action === 'naming' || userState.action === 'rename')) {
+    const ip = userState.ip;
+    const name = text;
+    
+    try {
+      const result = await db.updateIPName(ip, name);
+      if (result) {
+        await ctx.reply(`✅ Назву для IP ${ip} встановлено: ${name}`);
+      } else {
+        await ctx.reply('❌ Помилка: IP не знайдено');
+      }
+    } catch (error) {
+      console.error('Помилка при встановленні назви:', error);
+      await ctx.reply('❌ Сталася помилка при встановленні назви');
+    }
+    
+    global.userStates.delete(userId);
+    return;
   }
 }
 

@@ -1,149 +1,158 @@
-const { Low } = require('lowdb');
-const { JSONFile } = require('lowdb/node');
+// db.js
+const low = require('lowdb');
+const FileSync = require('lowdb/adapters/FileSync');
 const path = require('path');
 const fs = require('fs');
 
-// Створюємо папку data, якщо її немає
+// Перевірка та створення папки data
 const dataDir = path.join(__dirname, 'data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir);
 }
 
-// Шляхи до файлів
+// Шляхи до файлів бази даних
 const ipsFile = path.join(dataDir, 'ips.json');
 const errorsFile = path.join(dataDir, 'errors.json');
 
-// Створюємо файли, якщо вони не існують
+// Перевірка і створення файлів
 if (!fs.existsSync(ipsFile)) fs.writeFileSync(ipsFile, '[]');
 if (!fs.existsSync(errorsFile)) fs.writeFileSync(errorsFile, '[]');
 
-// Ініціалізація баз даних
-const ipsDb = new Low(new JSONFile(ipsFile));
-const errorsDb = new Low(new JSONFile(errorsFile));
+// Створення адаптерів та баз даних
+const ipsAdapter = new FileSync(ipsFile);
+const errorsAdapter = new FileSync(errorsFile);
 
-// Ініціалізуємо бази даних
-async function initDB() {
-  await ipsDb.read();
-  await errorsDb.read();
-  
-  if (!ipsDb.data) ipsDb.data = [];
-  if (!errorsDb.data) errorsDb.data = [];
-  
-  await ipsDb.write();
-  await errorsDb.write();
+const ipsDB = low(ipsAdapter);
+const errorsDB = low(errorsAdapter);
+
+// Задаємо стандартні значення
+ipsDB.defaults([]).write();
+errorsDB.defaults([]).write();
+
+// Функція ініціалізації бази даних
+function initDB() {
+  console.log('База даних ініціалізована');
+  return Promise.resolve();
 }
 
 // Отримати всі IP
-async function getAllIPs() {
-  await ipsDb.read();
-  return ipsDb.data || [];
+function getAllIPs() {
+  return ipsDB.value();
+}
+
+// Отримати IP за адресою
+function getIP(ip) {
+  return ipsDB.find({ ip }).value();
 }
 
 // Додати новий IP
-async function addIP(ip, name = null) {
-  await ipsDb.read();
+function addIP(ip, name = null) {
+  // Перевіряємо чи існує такий IP
+  const exists = ipsDB.find({ ip }).value();
+  if (exists) {
+    return {
+      success: false,
+      message: `IP ${ip} вже існує в списку`
+    };
+  }
   
-  const existing = ipsDb.data.find(item => item.ip === ip);
-  if (existing) return { success: false, message: 'Ця IP вже існує' };
-  
+  // Додаємо новий IP
+  const now = new Date().toISOString();
   const newIP = {
-    name,
     ip,
+    name: name || null,
     status: 'unknown',
-    date_start: new Date().toISOString(),
+    date_start: now,
+    date_last: now,
     date_stop: null,
-    date_last: new Date().toISOString(),
     responseTime: null
   };
   
-  ipsDb.data.push(newIP);
-  await ipsDb.write();
+  ipsDB.push(newIP).write();
   return { success: true, data: newIP };
 }
 
 // Видалити IP
-async function removeIP(ip) {
-  await ipsDb.read();
-  ipsDb.data = ipsDb.data.filter(item => item.ip !== ip);
-  await ipsDb.write();
-  return true;
+function removeIP(ip) {
+  const removed = ipsDB.remove({ ip }).write();
+  return removed.length > 0;
 }
 
 // Оновити статус IP
-async function updateIPStatus(ip, status, responseTime = null) {
-  await ipsDb.read();
-  const ipToUpdate = ipsDb.data.find(item => item.ip === ip);
-  
-  if (!ipToUpdate) return false;
-  
-  ipToUpdate.status = status;
-  ipToUpdate.date_last = new Date().toISOString();
-  ipToUpdate.responseTime = responseTime;
-  
-  if (status === 'down' && ipToUpdate.date_stop === null) {
-    ipToUpdate.date_stop = new Date().toISOString();
-  } else if (status === 'up' && ipToUpdate.date_stop !== null) {
-    const downtime = new Date() - new Date(ipToUpdate.date_stop);
-    ipToUpdate.date_stop = null;
-    await ipsDb.write();
-    return { downtime };
+function updateIPStatus(ip, status, responseTime = null) {
+  const ipToUpdate = ipsDB.find({ ip });
+  if (!ipToUpdate.value()) {
+    return {
+      success: false,
+      message: `IP ${ip} не знайдено в списку`
+    };
   }
   
-  await ipsDb.write();
-  return true;
+  const now = new Date().toISOString();
+  const wasDown = ipToUpdate.value().status === 'down';
+  
+  // Оновлюємо дані
+  const updates = {
+    status,
+    responseTime,
+    date_last: now
+  };
+  
+  if (status === 'down' && !wasDown) {
+    updates.date_stop = now;
+  } else if (status === 'up' && wasDown) {
+    const downtime = ipToUpdate.value().date_stop ? 
+      new Date(now) - new Date(ipToUpdate.value().date_stop) : 0;
+    updates.date_stop = null;
+    ipToUpdate.assign(updates).write();
+    return {
+      success: true,
+      downtime
+    };
+  }
+  
+  ipToUpdate.assign(updates).write();
+  return { success: true };
 }
 
 // Оновити назву IP
-async function updateIPName(ip, newName) {
-  await ipsDb.read();
-  const ipToUpdate = ipsDb.data.find(item => item.ip === ip);
+function updateIPName(ip, newName) {
+  const ipToUpdate = ipsDB.find({ ip });
+  if (!ipToUpdate.value()) {
+    return {
+      success: false,
+      message: `IP ${ip} не знайдено в списку`
+    };
+  }
   
-  if (!ipToUpdate) return false;
-  
-  ipToUpdate.name = newName;
-  await ipsDb.write();
-  return true;
+  ipToUpdate.assign({ name: newName }).write();
+  return { success: true };
 }
 
 // Додати помилку до журналу
-async function addError(ip) {
-  await errorsDb.read();
+function addError(ip) {
+  const exists = errorsDB.find({ ip }).value();
+  if (exists) {
+    return false;
+  }
   
-  const existingError = errorsDb.data.find(item => item.ip === ip);
-  if (existingError) return false;
-  
-  errorsDb.data.push({
+  errorsDB.push({
     ip,
-    timestamp: new Date().toISOString()
-  });
+    date: new Date().toISOString()
+  }).write();
   
-  await errorsDb.write();
   return true;
 }
 
 // Видалити помилку з журналу
-async function removeError(ip) {
-  await errorsDb.read();
-  const initialLength = errorsDb.data.length;
-  errorsDb.data = errorsDb.data.filter(item => item.ip !== ip);
-  
-  if (errorsDb.data.length < initialLength) {
-    await errorsDb.write();
-    return true;
-  }
-  return false;
+function removeError(ip) {
+  const removed = errorsDB.remove({ ip }).write();
+  return removed.length > 0;
 }
 
 // Отримати всі помилки
-async function getAllErrors() {
-  await errorsDb.read();
-  return errorsDb.data || [];
-}
-
-// Отримати інформацію про IP
-async function getIP(ip) {
-  await ipsDb.read();
-  return ipsDb.data.find(item => item.ip === ip);
+function getAllErrors() {
+  return errorsDB.value();
 }
 
 module.exports = {
