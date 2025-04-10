@@ -4,17 +4,17 @@
     "name": "8",
     "status": "up",
     "date_start": "2025-04-10T21:21:18.930Z",
-    "date_last": "2025-04-10T21:22:26.686Z",
+    "date_last": "2025-04-10T22:34:03.386Z",
     "date_stop": null,
-    "responseTime": 9
+    "responseTime": 11
   },
   {
     "ip": "91.195.245.251",
     "name": "d",
     "status": "up",
     "date_start": "2025-04-10T21:28:55.572Z",
-    "date_last": "2025-04-10T22:27:17.709Z",
+    "date_last": "2025-04-10T22:34:04.440Z",
     "date_stop": null,
-    "responseTime": 24
+    "responseTime": 21
   }
 ]

@@ -43,27 +43,26 @@ function formatIPCard(ipData) {
   }
   
   // Функція для екранування спеціальних символів MarkdownV2
-  const escapeMarkdown = (text) => {
+  function escapeMarkdown(text) {
     if (!text) return '';
-    return String(text)
-      .replace(/\\/g, '\\\\')
-      .replace(/\./g, '\\.')
-      .replace(/-/g, '\\-')
-      .replace(/\*/g, '\\*')
-      .replace(/\[/g, '\\[')
-      .replace(/]/g, '\\]')
-      .replace(/\(/g, '\\(')
-      .replace(/\)/g, '\\)')
-      .replace(/~/g, '\\~')
-      .replace(/`/g, '\\`')
-      .replace(/>/g, '\\>')
-      .replace(/#/g, '\\#')
-      .replace(/\+/g, '\\+')
-      .replace(/=/g, '\\=')
-      .replace(/\|/g, '\\|')
-      .replace(/\{/g, '\\{')
-      .replace(/}/g, '\\}')
-      .replace(/!/g, '\\!');
+    // Перетворюємо на рядок, якщо потрібно
+    text = String(text);
+    
+    // Список символів, які потрібно екранувати
+    const specialChars = [
+      '\\', '_', '*', '[', ']', '(', ')', '~', '`',
+      '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'
+    ];
+    
+    // Екрануємо кожен спеціальний символ
+    let result = text;
+    for (const char of specialChars) {
+      // Створюємо регулярний вираз для кожного символу
+      const regex = new RegExp("\\"+char, 'g');
+      result = result.replace(regex, '\\' + char);
+    }
+    
+    return result;
   };
 
   const text = `📌 ${escapeMarkdown(name)}\n` +
