@@ -1,5 +1,4 @@
 const { Telegraf } = require('telegraf');
-const cron = require('node-cron');
 const config = require('./config');
 const db = require('./db');
 const { pingAllIPs } = require('./ping');
@@ -36,7 +35,7 @@ async function cleanupBot() {
 async function restartBot() {
   try {
     if (pingTask) {
-      pingTask.stop();
+      clearInterval(pingTask);
     }
     await global.bot.stop();
     console.log('Бот зупинений, очікуємо 5 секунд перед перезапуском...');
@@ -62,14 +61,14 @@ async function startBot() {
     console.log('База даних ініціалізована');
     
     // Запускаємо планувальник пінгування
-    pingTask = cron.schedule(config.PING_INTERVAL, async () => {
+    pingTask = setInterval(async () => {
       try {
         console.log('Запуск перевірки всіх IP...');
         await pingAllIPs();
       } catch (error) {
         console.error('Помилка при пінгуванні:', error);
       }
-    });
+    }, config.PING_INTERVAL);
 
     // Очищуємо всі попередні оновлення
     await global.bot.telegram.deleteWebhook({ drop_pending_updates: true });
@@ -90,7 +89,7 @@ function setupShutdown() {
     console.log('\nОтримано сигнал SIGINT (Ctrl+C)');
     if (pingTask) {
       console.log('Зупинка планувальника пінгування...');
-      pingTask.stop();
+      clearInterval(pingTask);
     }
     console.log('Зупинка бота...');
     global.bot.stop('SIGINT');
@@ -101,7 +100,7 @@ function setupShutdown() {
     console.log('\nОтримано сигнал SIGTERM');
     if (pingTask) {
       console.log('Зупинка планувальника пінгування...');
-      pingTask.stop();
+      clearInterval(pingTask);
     }
     console.log('Зупинка бота...');
     global.bot.stop('SIGTERM');

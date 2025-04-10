@@ -52,24 +52,41 @@ async function handleMessage(ctx) {
       await ctx.reply('Введіть назву для цієї IP (або /skip, щоб пропустити, або /cancel для скасування):');
       
     } else if (userState.step === 'waiting_name') {
-      let result;
-      if (text === '/skip') {
-        result = await db.addIP(userState.ip);
-      } else {
-        result = await db.addIP(userState.ip, text);
-      }
-      
-      global.userStates.delete(userId);
-      
-      if (result.success) {
-        await ctx.reply(text === '/skip' ? 
-          `IP ${userState.ip} успішно додано!` :
-          `IP ${userState.ip} з назвою "${text}" успішно додано!`
-        );
-        await pingIP(userState.ip);
-        await showIPList(ctx);
-      } else {
-        await ctx.reply(result.message);
+      try {
+        let result;
+        if (text === '/skip') {
+          result = await db.addIP(userState.ip);
+        } else {
+          result = await db.addIP(userState.ip, text);
+        }
+        
+        global.userStates.delete(userId);
+        
+        if (result.success) {
+          await ctx.reply(text === '/skip' ? 
+            `IP ${userState.ip} успішно додано!` :
+            `IP ${userState.ip} з назвою "${text}" успішно додано!`
+          );
+          
+          try {
+            await pingIP(userState.ip);
+          } catch (pingError) {
+            console.error('Помилка при пінгуванні:', pingError);
+          }
+          
+          try {
+            await showIPList(ctx);
+          } catch (listError) {
+            console.error('Помилка при відображенні списку:', listError);
+            await ctx.reply('Не вдалося показати список IP. Спробуйте команду /ip');
+          }
+        } else {
+          await ctx.reply(result.message);
+        }
+      } catch (error) {
+        console.error('Помилка при додаванні IP:', error);
+        await ctx.reply('Сталася помилка при додаванні IP. Спробуйте ще раз.');
+        global.userStates.delete(userId);
       }
     }
   }

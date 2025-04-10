@@ -33,10 +33,15 @@ async function handleCancel(ctx) {
 
 // Обробник команди /ip
 async function handleIp(ctx) {
-  if (!isUserAllowed(ctx.chat.id)) {
-    return ctx.reply('Доступ заборонено!');
+  try {
+    if (!isUserAllowed(ctx.chat.id)) {
+      return ctx.reply('Доступ заборонено!');
+    }
+    await showIPList(ctx);
+  } catch (error) {
+    console.error('Помилка при відображенні списку IP:', error);
+    await ctx.reply('Сталася помилка при відображенні списку IP. Спробуйте пізніше.');
   }
-  await showIPList(ctx);
 }
 
 // Обробник команди /add
