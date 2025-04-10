@@ -39,7 +39,50 @@ async function handleMessage(ctx) {
     return await ctx.reply('Команду скасовано.');
   }
   
-  if (!userState) return;
+  if (!userState) {
+    // Перевіряємо чи це IP-адреса
+    if (isValidIP(text)) {
+      try {
+        // Спочатку пінгуємо
+        const statusMsg = await ctx.reply(`Пінгую ${text}...`);
+        
+        try {
+          const result = await pingIP(text);
+          await ctx.deleteMessage(statusMsg.message_id);
+          
+          if (result.status === 'up') {
+            await ctx.reply(`✅ IP ${text} відповідає!\n⏰ Час відповіді: ${result.time} ms`);
+          } else {
+            await ctx.reply(`❌ IP ${text} не відповідає!`);
+          }
+          
+          // Перевіряємо чи є ця IP в базі
+          const ips = await db.getAllIPs();
+          const exists = ips.some(ip => ip.ip === text);
+          
+          if (!exists) {
+            // Якщо IP немає в базі, пропонуємо додати
+            const markup = {
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: '➕ Додати до списку', callback_data: `add_${text}` }]
+                ]
+              }
+            };
+            await ctx.reply('Хочете додати цю IP до списку моніторингу?', markup);
+          }
+        } catch (error) {
+          await ctx.deleteMessage(statusMsg.message_id);
+          await ctx.reply('Сталася помилка при пінгуванні. Спробуйте пізніше.');
+        }
+      } catch (error) {
+        console.error('Помилка:', error);
+        await ctx.reply('Сталася помилка. Спробуйте пізніше.');
+      }
+      return;
+    }
+    return;
+  }
   
   if (userState.command === 'add') {
     if (userState.step === 'waiting_ip') {

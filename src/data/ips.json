@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "name": null,
+    "ip": "65.109.94.248",
+    "status": "up",
+    "date_start": "2025-04-10T16:28:22.962Z",
+    "date_stop": null,
+    "date_last": "2025-04-10T16:44:58.743Z",
+    "responseTime": 63
+  },
+  {
+    "name": null,
+    "ip": "116.203.56.141",
+    "status": "down",
+    "date_start": "2025-04-10T16:29:09.930Z",
+    "date_stop": "2025-04-10T16:29:40.360Z",
+    "date_last": "2025-04-10T16:45:09.357Z",
+    "responseTime": null
+  }
+]

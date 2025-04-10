@@ -105,8 +105,37 @@ async function handlePing(ctx) {
   }
 }
 
+// Обробник додавання IP зі сповіщення
+async function handleAddFromMessage(ctx) {
+  try {
+    if (!isUserAllowed(ctx.from.id)) {
+      return ctx.reply('Доступ заборонено!');
+    }
+    
+    const ip = ctx.callbackQuery.data.split('_')[1];
+    const messageId = ctx.callbackQuery.message.message_id;
+    
+    // Видаляємо повідомлення з кнопкою
+    await ctx.deleteMessage(messageId);
+    
+    // Додаємо IP до бази
+    const result = await db.addIP(ip);
+    
+    if (result.success) {
+      await ctx.reply(`IP ${ip} успішно додано до списку!`);
+      await showIPList(ctx);
+    } else {
+      await ctx.reply(result.message);
+    }
+  } catch (error) {
+    console.error('Помилка при додаванні:', error);
+    await ctx.reply('Сталася помилка при додаванні IP. Спробуйте пізніше.');
+  }
+}
+
 module.exports = {
   handlePingAction,
   handleDeleteAction,
-  handlePing
+  handlePing,
+  handleAddFromMessage
 };

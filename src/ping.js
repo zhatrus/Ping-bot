@@ -23,7 +23,9 @@ async function pingIP(ip) {
       const hadError = await db.removeError(ip);
       if (hadError && updateResult.downtime) {
         const downtimeMinutes = Math.floor(updateResult.downtime / (1000 * 60));
-        const message = `🟢 IP ${ip} знову онлайн!\n` +
+        const ipData = await db.getIP(ip);
+        const ipName = ipData && ipData.name ? ` (${ipData.name})` : '';
+        const message = `🟢 IP ${ip}${ipName} знову онлайн!\n` +
                        `⏱ Час простою: ${downtimeMinutes} хвилин`;
         await notifyAdmins(message, global.bot);
       }
@@ -31,7 +33,9 @@ async function pingIP(ip) {
       // Якщо IP офлайн, додаємо до журналу помилок
       const added = await db.addError(ip);
       if (added) {
-        const message = `🔴 IP ${ip} не відповідає!`;
+        const ipData = await db.getIP(ip);
+        const ipName = ipData && ipData.name ? ` (${ipData.name})` : '';
+        const message = `🔴 IP ${ip}${ipName} не відповідає!`;
         await notifyAdmins(message, global.bot);
       }
     }
