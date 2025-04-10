@@ -44,7 +44,26 @@ function formatIPCard(ipData) {
   
   // Функція для екранування спеціальних символів MarkdownV2
   const escapeMarkdown = (text) => {
-    return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+    if (!text) return '';
+    return String(text)
+      .replace(/\\/g, '\\\\')
+      .replace(/\./g, '\\.')
+      .replace(/-/g, '\\-')
+      .replace(/\*/g, '\\*')
+      .replace(/\[/g, '\\[')
+      .replace(/]/g, '\\]')
+      .replace(/\(/g, '\\(')
+      .replace(/\)/g, '\\)')
+      .replace(/~/g, '\\~')
+      .replace(/`/g, '\\`')
+      .replace(/>/g, '\\>')
+      .replace(/#/g, '\\#')
+      .replace(/\+/g, '\\+')
+      .replace(/=/g, '\\=')
+      .replace(/\|/g, '\\|')
+      .replace(/\{/g, '\\{')
+      .replace(/}/g, '\\}')
+      .replace(/!/g, '\\!');
   };
 
   const text = `📌 ${escapeMarkdown(name)}\n` +
