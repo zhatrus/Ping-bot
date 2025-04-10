@@ -1,7 +1,6 @@
-const { Telegraf } = require('telegraf');
+const { Markup } = require('telegraf');
 require('dotenv').config();
 
-const bot = new Telegraf(process.env.BOT_TOKEN);
 const allowedChatIds = (process.env.ADMIN_IDS || '').split(',').map(id => id.trim());
 
 // Перевірка чи користувач має доступ
@@ -10,7 +9,12 @@ function isUserAllowed(chatId) {
 }
 
 // Відправка повідомлення всім адмінам
-async function notifyAdmins(message) {
+async function notifyAdmins(message, bot) {
+  if (!bot) {
+    console.error('Бот не ініціалізовано');
+    return;
+  }
+  
   for (const chatId of allowedChatIds) {
     try {
       await bot.telegram.sendMessage(chatId, message);
@@ -38,18 +42,30 @@ function formatIPCard(ipData) {
     uptimeInfo = `\n⏱ Час простою: ${downtime} хв`;
   }
   
-  return `📌 ${name}\n` +
+  const text = `📌 ${name}\n` +
          `🔗 ${ipData.ip}\n` +
          `📅 Зареєстровано: ${new Date(ipData.date_start).toLocaleString()}\n` +
          `🔄 Остання перевірка: ${new Date(ipData.date_last).toLocaleString()}\n` +
          `📊 Стан: ${statusEmoji} ${ipData.status}\n` +
          uptimeInfo;
+  
+  const markup = {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: '🔄 Пінгувати', callback_data: `ping_${ipData.ip}` },
+          { text: '❌ Видалити', callback_data: `delete_${ipData.ip}` }
+        ]
+      ]
+    }
+  };
+  
+  return { text, markup };
 }
 
 module.exports = {
   isUserAllowed,
   notifyAdmins,
   isValidIP,
-  formatIPCard,
-  bot
+  formatIPCard
 };

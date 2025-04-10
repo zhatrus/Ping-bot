@@ -6,11 +6,11 @@ const { notifyAdmins } = require('./utils');
 async function pingIP(ip) {
   try {
     const res = await ping.promise.probe(ip, {
-      timeout: 5,
-      min_reply: 3,  // Мінімум 3 відповіді
+      timeout: 30,  // Збільшуємо таймаут до 30 секунд
+      min_reply: 1,  // Зменшуємо мінімум до 1 відповіді для швидшої реакції
       extra: [
-        '-n', '4',  // 4 спроби для Windows
-        '-w', '5000'  // Таймаут 5 секунд для Windows
+        '-n', '3',  // Зменшуємо до 3 спроб для швидшої реакції
+        '-w', '30000'  // Збільшуємо таймаут до 30 секунд
       ]
     });
     
@@ -24,14 +24,14 @@ async function pingIP(ip) {
         const downtimeMinutes = Math.floor(updateResult.downtime / (1000 * 60));
         const message = `🟢 IP ${ip} знову онлайн!\n` +
                        `⏱ Час простою: ${downtimeMinutes} хвилин`;
-        await notifyAdmins(message);
+        await notifyAdmins(message, global.bot);
       }
     } else {
       // Якщо IP офлайн, додаємо до журналу помилок
       const added = await db.addError(ip);
       if (added) {
         const message = `🔴 IP ${ip} не відповідає!`;
-        await notifyAdmins(message);
+        await notifyAdmins(message, global.bot);
       }
     }
     
@@ -52,15 +52,29 @@ async function pingIP(ip) {
 
 // Пінгування всіх IP
 async function pingAllIPs() {
-  const ips = await db.getAllIPs();
-  const results = [];
-  
-  for (const ipData of ips) {
-    const result = await pingIP(ipData.ip);
-    results.push(result);
+  try {
+    const ips = await db.getAllIPs();
+    const results = [];
+    
+    for (const ipData of ips) {
+      try {
+        const result = await pingIP(ipData.ip);
+        results.push(result);
+      } catch (error) {
+        console.error(`Помилка при пінгуванні ${ipData.ip}:`, error);
+        results.push({
+          ip: ipData.ip,
+          status: 'error',
+          error: error.message
+        });
+      }
+    }
+    
+    return results;
+  } catch (error) {
+    console.error('Помилка при отриманні списку IP:', error);
+    throw error;
   }
-  
-  return results;
 }
 
 module.exports = {
