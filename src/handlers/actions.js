@@ -173,7 +173,7 @@ async function handlePing(ctx) {
       
       // Формуємо та відправляємо картку IP
       const card = formatIPCard(ipData);
-      await ctx.reply(card.text, { ...card.markup, parse_mode: 'MarkdownV2' });
+      await ctx.reply(card.text, { ...card.markup, parse_mode: 'HTML' });
     } catch (error) {
       console.error('Помилка при пінгуванні:', error);
       await ctx.reply('Сталася помилка при пінгуванні. Спробуйте пізніше.');

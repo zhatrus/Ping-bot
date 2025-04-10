@@ -42,35 +42,27 @@ function formatIPCard(ipData) {
     uptimeInfo = `\n⏱ Час простою: ${downtime} хв`;
   }
   
-  // Функція для екранування спеціальних символів MarkdownV2
-  function escapeMarkdown(text) {
+  // Функція для екранування HTML символів
+  function escapeHtml(text) {
     if (!text) return '';
-    // Перетворюємо на рядок, якщо потрібно
-    text = String(text);
-    
-    // Список символів, які потрібно екранувати
-    const specialChars = [
-      '\\', '_', '*', '[', ']', '(', ')', '~', '`',
-      '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'
-    ];
-    
-    // Екрануємо кожен спеціальний символ
-    let result = text;
-    for (const char of specialChars) {
-      // Створюємо регулярний вираз для кожного символу
-      const regex = new RegExp("\\"+char, 'g');
-      result = result.replace(regex, '\\' + char);
-    }
-    
-    return result;
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
   };
 
-  const text = `📌 ${escapeMarkdown(name)}\n` +
-         `🔗 \`${escapeMarkdown(ipData.ip)}\`\n` +
-         `📅 Зареєстровано: ${escapeMarkdown(new Date(ipData.date_start).toLocaleString())}\n` +
-         `🔄 Остання перевірка: ${escapeMarkdown(new Date(ipData.date_last).toLocaleString())}\n` +
-         `📊 Стан: ${statusEmoji} ${ipData.status}\n` +
-         `⏰ Час відповіді: ${ipData.responseTime || '?'} ms\n` +
+  const text = `📌 ${escapeHtml(name)}
+` +
+         `🔗 <code>${escapeHtml(ipData.ip)}</code>
+` +
+         `📅 Зареєстровано: ${escapeHtml(new Date(ipData.date_start).toLocaleString())}
+` +
+         `🔄 Остання перевірка: ${escapeHtml(new Date(ipData.date_last).toLocaleString())}
+` +
+         `📊 Стан: ${statusEmoji} ${ipData.status}
+` +
+         `⏰ Час відповіді: ${ipData.responseTime || '?'} ms
+` +
          uptimeInfo;
   
   const markup = {

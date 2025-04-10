@@ -14,7 +14,7 @@ async function showIPList(ctx) {
     
     for (const ipData of ips) {
       const card = formatIPCard(ipData);
-      await ctx.reply(card.text, { ...card.markup, parse_mode: 'MarkdownV2' });
+      await ctx.reply(card.text, { ...card.markup, parse_mode: 'HTML' });
     }
   } catch (error) {
     console.error('Помилка при відображенні списку IP:', error);
