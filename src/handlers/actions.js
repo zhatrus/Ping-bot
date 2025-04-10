@@ -157,7 +157,7 @@ async function handlePing(ctx) {
       // Пінгуємо IP з таймаутом
       const pingPromise = pingIP(ip);
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Час очікування відповіді вийшов')), 10000);
+        setTimeout(() => reject(new Error('Час очікування відповіді вийшов')), 15000); // Збільшуємо до 15 секунд
       });
       
       await Promise.race([pingPromise, timeoutPromise]);

@@ -11,14 +11,17 @@ async function pingIP(ip) {
       throw new Error(`IP ${ip} не знайдено в списку`);
     }
 
-    const res = await ping.promise.probe(ip, {
-      timeout: 5,  // Таймаут 5 секунд
-      min_reply: 1,  // Мінімум 1 відповідь
-      extra: [
-        '-n', '2',  // 2 спроби
-        '-w', '5000'  // Таймаут 5 секунд
-      ]
-    });
+    // Визначаємо параметри в залежності від ОС
+    const isWindows = process.platform === 'win32';
+    const pingOptions = {
+      timeout: 10,
+      min_reply: 1,
+      extra: isWindows ? 
+        ['-n', '2', '-w', '5000'] :  // Windows
+        ['-c', '2', '-W', '5']       // Linux/Unix
+    };
+
+    const res = await ping.promise.probe(ip, pingOptions);
     
     const isAlive = res.alive;
     const responseTime = isAlive ? parseFloat(res.time) : null;
