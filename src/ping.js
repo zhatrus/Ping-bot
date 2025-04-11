@@ -2,6 +2,33 @@ const { exec } = require('child_process');
 const db = require('./db');
 const { notifyAdmins } = require('./utils');
 
+// Функція для форматування часу простою
+function formatDowntime(minutes) {
+  if (minutes < 60) {
+    return `${minutes} хвилин`;
+  }
+  
+  const days = Math.floor(minutes / (24 * 60));
+  const hours = Math.floor((minutes % (24 * 60)) / 60);
+  const mins = minutes % 60;
+  
+  let result = [];
+  
+  if (days > 0) {
+    result.push(`${days} ${days === 1 ? 'день' : 'днів'}`);
+  }
+  
+  if (hours > 0) {
+    result.push(`${hours} ${hours === 1 ? 'година' : 'годин'}`);
+  }
+  
+  if (mins > 0 && days === 0) { // показуємо хвилини тільки якщо немає днів
+    result.push(`${mins} хвилин`);
+  }
+  
+  return result.join(' ');
+}
+
 // Функція для пінгування IP через системну команду
 async function pingIP(ip) {
   try {
@@ -67,7 +94,7 @@ async function pingIP(ip) {
             const ipData = await db.getIP(ip);
             const ipName = ipData && ipData.name ? ` ${ipData.name}` : '';
             const message = `🟢  ${ipName} IP: ${ip} знову онлайн!\n` +
-                           `⏱ Час простою: ${downtimeMinutes} хвилин`;
+                           `⏱ Час простою: ${formatDowntime(downtimeMinutes)}`;
             await notifyAdmins(message, global.bot);
           }
         }
