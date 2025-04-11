@@ -18,10 +18,20 @@ async function pingIP(ip) {
       `ping -c 2 -W 5 ${ip}`;
 
     return new Promise((resolve, reject) => {
-      exec(command, (error, stdout, stderr) => {
+      exec(command, async (error, stdout, stderr) => {
         if (error) {
           // Оновлюємо статус в базі даних як 'down'
-          db.updateIPStatus(ip, 'down', null);
+          await db.updateIPStatus(ip, 'down', null);
+          
+          // Перевіряємо чи потрібно відправити сповіщення про відключення
+          const added = await db.addError(ip);
+          if (added) {
+            const ipData = await db.getIP(ip);
+            const ipName = ipData && ipData.name ? ` ${ipData.name}` : '';
+            const message = `🔴  ${ipName} IP: ${ip} не відповідає!`;
+            await notifyAdmins(message, global.bot);
+          }
+          
           resolve({ alive: false, time: null });
           return;
         }
@@ -47,7 +57,20 @@ async function pingIP(ip) {
         const isAlive = responseTime !== null;
         
         // Оновлюємо статус в базі даних
-        db.updateIPStatus(ip, isAlive ? 'up' : 'down', responseTime);
+        const updateResult = await db.updateIPStatus(ip, isAlive ? 'up' : 'down', responseTime);
+        
+        // Якщо IP знову онлайн, перевіряємо чи була помилка
+        if (isAlive) {
+          const hadError = await db.removeError(ip);
+          if (hadError && updateResult.downtime) {
+            const downtimeMinutes = Math.floor(updateResult.downtime / (1000 * 60));
+            const ipData = await db.getIP(ip);
+            const ipName = ipData && ipData.name ? ` ${ipData.name}` : '';
+            const message = `🟢  ${ipName} IP: ${ip} знову онлайн!\n` +
+                           `⏱ Час простою: ${downtimeMinutes} хвилин`;
+            await notifyAdmins(message, global.bot);
+          }
+        }
         
         resolve({
           alive: isAlive,
@@ -56,28 +79,7 @@ async function pingIP(ip) {
       });
     });
     
-    // Обробляємо зміну статусу
-    if (isAlive) {
-      // Якщо IP знову онлайн, перевіряємо чи була помилка
-      const hadError = await db.removeError(ip);
-      if (hadError && updateResult.downtime) {
-        const downtimeMinutes = Math.floor(updateResult.downtime / (1000 * 60));
-        const ipData = await db.getIP(ip);
-        const ipName = ipData && ipData.name ? ` (${ipData.name})` : '';
-        const message = `🟢 IP ${ip}${ipName} знову онлайн!\n` +
-                       `⏱ Час простою: ${downtimeMinutes} хвилин`;
-        await notifyAdmins(message, global.bot);
-      }
-    } else {
-      // Якщо IP офлайн, додаємо до журналу помилок
-      const added = await db.addError(ip);
-      if (added) {
-        const ipData = await db.getIP(ip);
-        const ipName = ipData && ipData.name ? ` (${ipData.name})` : '';
-        const message = `🔴 IP ${ip}${ipName} не відповідає!`;
-        await notifyAdmins(message, global.bot);
-      }
-    }
+
     
     return {
       ip,
